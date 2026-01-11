@@ -1,0 +1,23 @@
+#!/usr/bin/bash
+. ./lib/bmp || exit
+
+main(){
+	local width=2
+	local height=2
+	bmp-header "$width" "$height"
+	local padding=$REPLY
+
+	#COLOUR DATA
+	
+	#BOTTOM ROW
+	bmp-rgb 0 0 0
+	bmp-rgb 255 255 255
+	bmp-pad "$padding"
+	
+	#TOP ROW
+	bmp-rgb 255 0 0
+	bmp-rgb 0 255 0
+	bmp-pad "$padding"
+}
+
+main "$@"

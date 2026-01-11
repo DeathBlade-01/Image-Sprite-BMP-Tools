@@ -1,0 +1,83 @@
+#!/usr/bin/bash
+
+. ./lib/bmp || exit
+. ./lib/progress-bar-mod || exit
+debug(){
+	echo '[debug]' "$@">&2 ## OUT TO STDERR
+}
+
+declare -A PALETTE
+make_bmp(){
+	local SPRITE
+	mapfile -t SPRITE
+
+
+	local width=${#SPRITE[0]}
+	local height=${#SPRITE[@]}
+	bmp-header "$width" "$height"
+	local padding=$REPLY
+
+	debug "width=$width height=$height"
+	#COLOUR DATA
+	local r g b x y
+	init_term
+	for ((y=0;y<height;y++));do
+		for((x=0;x<width;x++));do
+			local c=${SPRITE[height-y-1]} # TO reinv back to y-axis
+			c=${c:x:1} #To get substr of len x and take the rightmost char
+			read -r r g b <<< "${PALETTE[$c]}"
+			bmp-rgb "$r" "$g" "$b"
+		done 
+		if ((y%10==0));then
+			debug "handled row $y/$height"
+		fi
+		progress-bar "$y" "$height"
+		bmp-pad "$padding"
+	done	
+	deinit_term
+}
+hex2rgb(){
+	local hex=${1#\#}
+	local r g b
+		r=$((16#${hex:0:2}))
+		g=$((16#${hex:2:2}))
+		b=$((16#${hex:4:2}))
+	echo "$r $g $b"
+}
+load-palette(){
+	local file=$1
+	local lines
+
+	mapfile -t lines < "$file" || exit
+
+	local line
+	for line in "${lines[@]}";do
+		local c hex
+		c=${line:0:1}
+		hex=${line:2}
+
+		PALETTE[$c]=$(hex2rgb "$hex")
+	done
+}
+main(){
+	local output=img.bmp
+	local palette=palette.txt
+
+
+	local OPTIND OPTARG opt
+	while getopts 'o:p:' opt; do
+		case "$opt" in
+			o) output=$OPTARG;;
+			p) palette=$OPTARG;;
+		esac
+	done
+
+	[[ -n $palette ]] || exit
+	load-palette "$palette"
+
+
+	make_bmp > "$output"
+	echo -e "Generated image.\nOutput File Name:${output}"
+}
+
+main "$@"

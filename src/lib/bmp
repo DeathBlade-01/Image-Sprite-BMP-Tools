@@ -1,0 +1,128 @@
+#!/usr/bin/bash
+
+u32le(){
+	local n=$1 out
+
+	#CONV TO 4 Octets
+	#12345678 -> 12 34 56 78
+	local octet1=$((  (n>>24) &0xFF))
+	local octet2=$((  (n>>16) &0xFF))
+	local octet3=$((  (n>>8)  &0xFF))
+	local octet4=$((  (n>>0)  &0xFF))
+
+	printf -v out '\\x%02x\\x%02x\\x%02x\\x%02x' \
+		"$octet4" \
+		"$octet3" \
+		"$octet2" \
+		"$octet1"
+	printf '%b' "$out"
+}
+
+u16le(){
+	local n=$1 out
+
+	#CONV TO 2 Octets
+	#1234 -> 12 34 
+	local octet1=$((  (n>>8) &0xFF))
+	local octet2=$((  (n>>0) &0xFF))
+
+	printf -v out '\\x%02x\\x%02x' \
+		"$octet2" \
+		"$octet1"
+	printf '%b' "$out"
+}
+
+bmp-rgb(){
+	local r=$1
+	local g=$2
+	local b=$3
+	local out
+
+	printf -v out '\\x%02x\\x%02x\\x%02x' \
+		"$b" \
+		"$g" \
+		"$r"
+	printf '%b' "$out"
+	
+}
+# u32le "$((16#12345678))"
+# exit
+
+bmp-header() {
+	local bits_per_pixel=24
+
+	local bytes_per_pixel=$((bits_per_pixel/8))
+
+	#RASTER SCAN FROM BOTTOM TO TOP
+
+	local row_size=$((width * bytes_per_pixel))
+
+
+	#BMP MUST BE ALIGNED WITH 4Byte Boundary
+	local padding=0
+	while((row_size%4 != 0)); do
+		((padding++))
+		((row_size++))
+	done
+
+	local pixel_data_size=$((row_size * height))
+	local pixel_data_offset=40+14
+
+	local file_size=$((pixel_data_size + pixel_data_offset))
+
+
+
+	#HEADER(14B)
+
+	##SIGNATURE
+	printf 'BM' # GOES TO STDOUT
+	## FILESIZE
+	u32le "$file_size"
+
+	## Reserved (set 0)
+	u32le 0
+
+	## Data Offset
+	u32le "$pixel_data_offset"
+
+
+	#INFO HEADER
+
+	## Size
+	u32le 40
+
+	## Width
+	u32le "$width"
+
+	## Height
+	u32le "$height"
+
+	## #Planes(==1)
+	u16le 1
+
+	## Bitcount
+	u16le "$bits_per_pixel"
+	## Compression
+	u32le 0
+	## Imagesize
+	u32le 0
+	## XPixelsPerM
+	u32le 0
+	## YPixelsPerM
+	u32le 0
+	## ColoursUsed
+	u32le 0
+	##ColorsImportant
+	u32le 0
+
+	REPLY=$padding
+}
+bmp-pad(){
+	local padding=$1
+	for (( i=0;i<padding;i++ ));do
+		printf '\0'
+	done
+
+}
+
+
